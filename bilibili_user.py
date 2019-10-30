@@ -54,10 +54,10 @@ proxies = {
 }
 
 ip_pool = [
-    '111.29.3.220:8080',
-    '111.29.3.221:8080',
-    '111.29.3.193:8080',
-    '39.137.69.10:8080',
+    '27.152.90.175:9999',
+    '59.57.148.195:9999',
+    '36.25.42.160:9999',
+    '139.129.207.72:808',
 ]
 
 
@@ -73,11 +73,10 @@ time1 = time.time()
 urls = []
 
 # Please change the range data by yourself.
-for m in range(0, 6000):
 
-    for i in range(m * 100, (m + 1) * 100):
-        url = 'https://space.bilibili.com/' + str(i)
-        urls.append(url)
+for i in range(0, 10000):
+    url = 'https://space.bilibili.com/' + str(i)
+    urls.append(url)
 
     def getsource(url):
         payload = {
@@ -168,7 +167,7 @@ for m in range(0, 6000):
             pass
 
 if __name__ == "__main__":
-    pool = ThreadPool(1)
+    pool = ThreadPool(10)
     try:
         results = pool.map(getsource, urls)
     except Exception as e:
