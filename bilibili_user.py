@@ -10,6 +10,7 @@ import time
 from imp import reload
 from multiprocessing.dummy import Pool as ThreadPool
 
+
 def datetime_to_timestamp_in_milliseconds(d):
     def current_milli_time(): return int(round(time.time() * 1000))
 
@@ -24,7 +25,7 @@ def LoadUserAgents(uafile):
     with open(uafile, 'rb') as uaf:
         for ua in uaf.readlines():
             if ua:
-                uas.append(ua.strip()[:-1])
+                uas.append(ua.decode().strip()[:-1])
     random.shuffle(uas)
     return uas
 
@@ -43,21 +44,40 @@ head = {
 
 # Please replace your own proxies.
 proxies = {
-    'http': 'http://120.26.110.59:8080',
-    'http': 'http://120.52.32.46:80',
-    'http': 'http://218.85.133.62:80',
+
+    'https': 'https://120.78.171.14:6666',
+
+    # 'https': 'https://219.143.146.116:9999',
+
+
+
 }
+
+ip_pool = [
+    '111.29.3.220:8080',
+    '111.29.3.221:8080',
+    '111.29.3.193:8080',
+    '39.137.69.10:8080',
+]
+
+
+def ip_proxy():
+    ip = ip_pool[random.randrange(0, 4)]
+    proxy_ip = 'http://'+ip
+    proxies = {'http': proxy_ip}
+    return proxies
+
+
 time1 = time.time()
 
 urls = []
 
 # Please change the range data by yourself.
-for m in range(5214, 5215):
+for m in range(0, 6000):
 
     for i in range(m * 100, (m + 1) * 100):
         url = 'https://space.bilibili.com/' + str(i)
         urls.append(url)
-
 
     def getsource(url):
         payload = {
@@ -74,12 +94,13 @@ for m in range(5214, 5215):
             .post('http://space.bilibili.com/ajax/member/GetInfo',
                   headers=head,
                   data=payload,
-                  proxies=proxies) \
+                  proxies=ip_proxy()) \
             .text
         time2 = time.time()
         try:
             jsDict = json.loads(jscontent)
-            statusJson = jsDict['status'] if 'status' in jsDict.keys() else False
+            statusJson = jsDict['status'] if 'status' in jsDict.keys(
+            ) else False
             if statusJson == True:
                 if 'data' in jsDict.keys():
                     jsData = jsDict['data']
@@ -90,9 +111,10 @@ for m in range(5214, 5215):
                     face = jsData['face']
                     regtimestamp = jsData['regtime']
                     regtime_local = time.localtime(regtimestamp)
-                    regtime = time.strftime("%Y-%m-%d %H:%M:%S",regtime_local)
+                    regtime = time.strftime("%Y-%m-%d %H:%M:%S", regtime_local)
                     spacesta = jsData['spacesta']
-                    birthday = jsData['birthday'] if 'birthday' in jsData.keys() else 'nobirthday'
+                    birthday = jsData['birthday'] if 'birthday' in jsData.keys(
+                    ) else 'nobirthday'
                     sign = jsData['sign']
                     level = jsData['level_info']['current_level']
                     OfficialVerifyType = jsData['official_verify']['type']
@@ -102,7 +124,8 @@ for m in range(5214, 5215):
                     toutu = jsData['toutu']
                     toutuId = jsData['toutuId']
                     coins = jsData['coins']
-                    print("Succeed get user info: " + str(mid) + "\t" + str(time2 - time1))
+                    print("Succeed get user info: " +
+                          str(mid) + "\t" + str(time2 - time1))
                     try:
                         res = requests.get(
                             'https://api.bilibili.com/x/relation/stat?vmid=' + str(mid) + '&jsonp=jsonp').text
@@ -124,7 +147,7 @@ for m in range(5214, 5215):
                 try:
                     # Please write your MySQL's information.
                     conn = pymysql.connect(
-                        host='localhost', user='root', passwd='123456', db='bilibili', charset='utf8')
+                        host='eam-mysql', user='root', passwd='123456', db='bilibili', charset='utf8')
                     cur = conn.cursor()
                     cur.execute('INSERT INTO bilibili_user_info(mid, name, sex, rank, face, regtime, spacesta, \
                                 birthday, sign, level, OfficialVerifyType, OfficialVerifyDesc, vipType, vipStatus, \
@@ -132,9 +155,9 @@ for m in range(5214, 5215):
                     VALUES ("%s","%s","%s","%s","%s","%s","%s","%s","%s","%s",\
                             "%s","%s","%s","%s","%s", "%s","%s","%s","%s","%s","%s")'
                                 %
-                                (mid, name, sex, rank, face, regtime, spacesta, \
-                                birthday, sign, level, OfficialVerifyType, OfficialVerifyDesc, vipType, vipStatus, \
-                                toutu, toutuId, coins, following, fans ,archiveview, article))
+                                (mid, name, sex, rank, face, regtime, spacesta,
+                                 birthday, sign, level, OfficialVerifyType, OfficialVerifyDesc, vipType, vipStatus,
+                                 toutu, toutuId, coins, following, fans, archiveview, article))
                     conn.commit()
                 except Exception as e:
                     print(e)
@@ -150,6 +173,6 @@ if __name__ == "__main__":
         results = pool.map(getsource, urls)
     except Exception as e:
         print(e)
- 
+
     pool.close()
     pool.join()
