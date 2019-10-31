@@ -88,6 +88,7 @@ for i in range(0, 10000):
     urls.append(url)
 
     def getsource(url):
+        log.info("执行开始")
         payload = {
             '_': datetime_to_timestamp_in_milliseconds(datetime.datetime.now()),
             'mid': url.replace('https://space.bilibili.com/', '')
@@ -103,7 +104,7 @@ for i in range(0, 10000):
             log.error("无效的地址"+url)
             jscontent = getUserInfo(head, payload)
             if jscontent == None:
-                return
+                pass
         time2 = time.time()
         try:
             jsDict = json.loads(jscontent)
@@ -181,7 +182,7 @@ for i in range(0, 10000):
             pass
 
 if __name__ == "__main__":
-    pool = ThreadPool(10)
+    pool = ThreadPool()
     try:
         results = pool.map(getsource, urls)
     except Exception as e:
