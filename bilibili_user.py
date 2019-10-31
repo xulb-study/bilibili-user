@@ -74,7 +74,7 @@ def getUserInfo(head, payload):
             retry_count -= 1
             # 出错2次, 删除代理池中代理
             delete_proxy(proxy)
-            log.info("删除代理池中代理"+str(e))
+            log.debug("删除代理池中代理"+str(e))
 
     return None
 
