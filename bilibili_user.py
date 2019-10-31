@@ -85,7 +85,7 @@ urls = []
 
 # Please change the range data by yourself.
 
-for i in range(0, 10000):
+for i in range(100001, 5000000):
     url = 'https://space.bilibili.com/' + str(i)
     urls.append(url)
 
@@ -103,7 +103,6 @@ for i in range(0, 10000):
 
         jscontent = getUserInfo(head, payload)
         if jscontent == None:
-            log.error("无效的地址"+url)
             jscontent = getUserInfo(head, payload)
             if jscontent == None:
                 return
@@ -187,7 +186,7 @@ for i in range(0, 10000):
             pass
 
 if __name__ == "__main__":
-    pool = ThreadPool(10)
+    pool = ThreadPool(40)
     try:
         results = pool.map(getsource, urls)
     except Exception as e:
