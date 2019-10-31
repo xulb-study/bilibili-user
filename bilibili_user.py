@@ -75,7 +75,7 @@ def getUserInfo(head, payload):
             except:
                 retry_count -= 1
                 delete_proxy(proxy)
-                log.debug("删除代理池中代理"+str(e))
+                log.debug("删除代理池中代理")
                 return getUserInfo(head, payload)
 
         except Exception as e:
