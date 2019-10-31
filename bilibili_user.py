@@ -4,10 +4,10 @@ import requests
 import json
 import random
 import pymysql
-import sys
+
 import datetime
 import time
-from imp import reload
+
 from multiprocessing.dummy import Pool as ThreadPool
 
 
@@ -15,9 +15,6 @@ def datetime_to_timestamp_in_milliseconds(d):
     def current_milli_time(): return int(round(time.time() * 1000))
 
     return current_milli_time()
-
-
-reload(sys)
 
 
 def LoadUserAgents(uafile):
@@ -42,46 +39,32 @@ head = {
     'Accept': 'application/json, text/javascript, */*; q=0.01',
 }
 
-# Please replace your own proxies.
-proxies = {
 
-    'https': 'https://120.78.171.14:6666',
-
-    # 'https': 'https://219.143.146.116:9999',
+def get_proxy():
+    return requests.get("http://my_propxy:5010/get/").json()
 
 
-
-}
-
-ip_pool = [
-    '139.129.207.72:808',
-    '119.188.171.32:8081',
-    '219.143.146.116:9999',
-    '118.113.72.231:8118',
-    '39.108.175.149:8866',
-    '61.130.181.231:20195',
-    '139.129.238.1:8011',
-    '27.159.72.41:65001',
-    '112.195.123.230:61234',
-    '222.180.162.119:4321',
-    '59.151.35.114:8099',
-    '59.63.158.35:31829',
-    '47.92.82.189:11002',
-    '47.112.100.47:9966',
-    '182.96.203.11:49225',
-    '42.89.212.245:8118',
-    '120.78.171.14:6666',
-    '106.13.119.22:8001',
-    '39.137.69.9:8080',
-    '47.110.130.152:8080',
-]
+def delete_proxy(proxy):
+    requests.get("http://my_propxy:5010/delete/?proxy={}".format(proxy))
 
 
-def ip_proxy():
-    ip = ip_pool[random.randrange(0, 20)]
-    proxy_ip = 'http://'+ip
-    proxies = {'http': proxy_ip}
-    return proxies
+def getUserInfo(head, payload):
+    retry_count = 5
+    proxy = get_proxy().get("proxy")
+    while retry_count > 0:
+        try:
+            return requests \
+                .session() \
+                .post('http://space.bilibili.com/ajax/member/GetInfo',
+                      headers=head,
+                      data=payload,
+                      proxies={"http": "http://{}".format(proxy)}) \
+                .text
+        except Exception:
+            retry_count -= 1
+            # 出错5次, 删除代理池中代理
+            delete_proxy(proxy)
+    return None
 
 
 time1 = time.time()
@@ -104,13 +87,11 @@ for i in range(0, 10000):
             'User-Agent': ua,
             'Referer': 'https://space.bilibili.com/' + str(i) + '?from=search&seid=' + str(random.randint(10000, 50000))
         }
-        jscontent = requests \
-            .session() \
-            .post('http://space.bilibili.com/ajax/member/GetInfo',
-                  headers=head,
-                  data=payload,
-                  proxies=ip_proxy()) \
-            .text
+
+        jscontent = getUserInfo(head, payload)
+        if jscontent == None:
+            print(url+"ERROR")
+            return
         time2 = time.time()
         try:
             jsDict = json.loads(jscontent)
@@ -142,10 +123,15 @@ for i in range(0, 10000):
                     print("Succeed get user info: " +
                           str(mid) + "\t" + str(time2 - time1))
                     try:
+                        proxy = get_proxy().get("proxy")
                         res = requests.get(
-                            'https://api.bilibili.com/x/relation/stat?vmid=' + str(mid) + '&jsonp=jsonp').text
+                            'https://api.bilibili.com/x/relation/stat?vmid=' +
+                            str(mid) + '&jsonp=jsonp',
+                            proxies={"http": "http://{}".format(proxy)}).text
                         viewinfo = requests.get(
-                            'https://api.bilibili.com/x/space/upstat?mid=' + str(mid) + '&jsonp=jsonp').text
+                            'https://api.bilibili.com/x/space/upstat?mid=' +
+                            str(mid) + '&jsonp=jsonp',
+                            proxies={"http": "http://{}".format(proxy)}).text
                         js_fans_data = json.loads(res)
                         js_viewdata = json.loads(viewinfo)
                         following = js_fans_data['data']['following']
