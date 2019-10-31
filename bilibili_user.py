@@ -49,11 +49,12 @@ head = {
 
 
 def get_proxy():
-    return requests.get("http://my_propxy:5010/get/").json()
+    return requests.get("http://my_propxy:5010/get/", timeout=2).json()
 
 
 def delete_proxy(proxy):
-    requests.get("http://my_propxy:5010/delete/?proxy={}".format(proxy))
+    requests.get(
+        "http://my_propxy:5010/delete/?proxy={}".format(proxy), timeout=2)
 
 
 def getUserInfo(head, payload):
@@ -66,6 +67,7 @@ def getUserInfo(head, payload):
                 .post('http://space.bilibili.com/ajax/member/GetInfo',
                       headers=head,
                       data=payload,
+                      timeout=2,
                       proxies={"http": "http://{}".format(proxy)}) \
                 .text
         except Exception as e:
@@ -140,10 +142,12 @@ for i in range(0, 10000):
                         res = requests.get(
                             'https://api.bilibili.com/x/relation/stat?vmid=' +
                             str(mid) + '&jsonp=jsonp',
+                            timeout=2,
                             proxies={"http": "http://{}".format(proxy)}).text
                         viewinfo = requests.get(
                             'https://api.bilibili.com/x/space/upstat?mid=' +
                             str(mid) + '&jsonp=jsonp',
+                            timeout=2,
                             proxies={"http": "http://{}".format(proxy)}).text
                         js_fans_data = json.loads(res)
                         js_viewdata = json.loads(viewinfo)
