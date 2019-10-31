@@ -8,6 +8,9 @@ import pymysql
 import datetime
 import time
 
+import logging as log
+
+
 from multiprocessing.dummy import Pool as ThreadPool
 
 
@@ -26,6 +29,11 @@ def LoadUserAgents(uafile):
     random.shuffle(uas)
     return uas
 
+
+log.basicConfig(level=log.INFO,
+                format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                datefmt='%a, %d %b %Y %H:%M:%S',
+                handlers={log.FileHandler(filename='test.log', mode='a', encoding='utf-8')})
 
 uas = LoadUserAgents("user_agents.txt")
 head = {
@@ -49,7 +57,7 @@ def delete_proxy(proxy):
 
 
 def getUserInfo(head, payload):
-    retry_count = 5
+    retry_count = 2
     proxy = get_proxy().get("proxy")
     while retry_count > 0:
         try:
@@ -60,10 +68,12 @@ def getUserInfo(head, payload):
                       data=payload,
                       proxies={"http": "http://{}".format(proxy)}) \
                 .text
-        except Exception:
+        except Exception as e:
             retry_count -= 1
-            # 出错5次, 删除代理池中代理
+            # 出错2次, 删除代理池中代理
             delete_proxy(proxy)
+            log.info("删除代理池中代理"+e)
+
     return None
 
 
@@ -90,8 +100,10 @@ for i in range(0, 10000):
 
         jscontent = getUserInfo(head, payload)
         if jscontent == None:
-            print(url+"ERROR")
-            return
+            log.error("无效的地址"+url)
+            jscontent = getUserInfo(head, payload)
+            if jscontent == None:
+                return
         time2 = time.time()
         try:
             jsDict = json.loads(jscontent)
@@ -120,8 +132,8 @@ for i in range(0, 10000):
                     toutu = jsData['toutu']
                     toutuId = jsData['toutuId']
                     coins = jsData['coins']
-                    print("Succeed get user info: " +
-                          str(mid) + "\t" + str(time2 - time1))
+                    log.info("Succeed get user info: " +
+                             str(mid) + "\t" + str(time2 - time1))
                     try:
                         proxy = get_proxy().get("proxy")
                         res = requests.get(
@@ -144,7 +156,7 @@ for i in range(0, 10000):
                         archiveview = 0
                         article = 0
                 else:
-                    print('no data now')
+                    log.info('no data now')
                 try:
                     # Please write your MySQL's information.
                     conn = pymysql.connect(
@@ -161,19 +173,19 @@ for i in range(0, 10000):
                                  toutu, toutuId, coins, following, fans, archiveview, article))
                     conn.commit()
                 except Exception as e:
-                    print(e)
+                    log.error(e)
             else:
-                print("Error: " + url)
+                log.error("Error: " + url)
         except Exception as e:
-            print(e)
+            log.error(e)
             pass
 
 if __name__ == "__main__":
-    pool = ThreadPool(20)
+    pool = ThreadPool(10)
     try:
         results = pool.map(getsource, urls)
     except Exception as e:
-        print(e)
+        log.error(e)
 
     pool.close()
     pool.join()
