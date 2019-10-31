@@ -62,7 +62,7 @@ def getUserInfo(head, payload):
     proxy = get_proxy().get("proxy")
     while retry_count > 0:
         try:
-            return requests \
+            jscontent = requests \
                 .session() \
                 .post('http://space.bilibili.com/ajax/member/GetInfo',
                       headers=head,
@@ -70,6 +70,14 @@ def getUserInfo(head, payload):
                       timeout=2,
                       proxies={"http": "http://{}".format(proxy), "https": "https://{}".format(proxy)}) \
                 .text
+            try:
+                return json.loads(jscontent)
+            except:
+                retry_count -= 1
+                delete_proxy(proxy)
+                log.debug("删除代理池中代理"+str(e))
+                return getUserInfo(head, payload)
+
         except Exception as e:
             retry_count -= 1
             # 出错2次, 删除代理池中代理
@@ -101,15 +109,13 @@ for i in range(100001, 5000000):
             'Referer': 'https://space.bilibili.com/' + str(i) + '?from=search&seid=' + str(random.randint(10000, 50000))
         }
 
-        jscontent = getUserInfo(head, payload)
-        if jscontent == None:
-            jscontent = getUserInfo(head, payload)
-            if jscontent == None:
+        jsDict = getUserInfo(head, payload)
+        if jsDict == None:
+            jsDict = getUserInfo(head, payload)
+            if jsDict == None:
                 return
         time2 = time.time()
         try:
-
-            jsDict = json.loads(jscontent)
             statusJson = jsDict['status'] if 'status' in jsDict.keys(
             ) else False
             if statusJson == True:
