@@ -68,7 +68,7 @@ def getUserInfo(head, payload):
                       headers=head,
                       data=payload,
                       timeout=2,
-                      proxies={"http": "http://{}".format(proxy)}) \
+                      proxies={"http": "http://{}".format(proxy), "https": "https://{}".format(proxy)}) \
                 .text
         except Exception as e:
             retry_count -= 1
@@ -144,12 +144,12 @@ for i in range(0, 10000):
                             'https://api.bilibili.com/x/relation/stat?vmid=' +
                             str(mid) + '&jsonp=jsonp',
                             timeout=2,
-                            proxies={"http": "http://{}".format(proxy)}).text
+                            proxies={"http": "http://{}".format(proxy), "https": "https://{}".format(proxy)}).text
                         viewinfo = requests.get(
                             'https://api.bilibili.com/x/space/upstat?mid=' +
                             str(mid) + '&jsonp=jsonp',
                             timeout=2,
-                            proxies={"http": "http://{}".format(proxy)}).text
+                            proxies={"http": "http://{}".format(proxy), "https": "https://{}".format(proxy)}).text
                         js_fans_data = json.loads(res)
                         js_viewdata = json.loads(viewinfo)
                         following = js_fans_data['data']['following']
@@ -187,7 +187,7 @@ for i in range(0, 10000):
             pass
 
 if __name__ == "__main__":
-    pool = ThreadPool()
+    pool = ThreadPool(10)
     try:
         results = pool.map(getsource, urls)
     except Exception as e:
