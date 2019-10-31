@@ -74,7 +74,7 @@ def getUserInfo(head, payload):
             retry_count -= 1
             # 出错2次, 删除代理池中代理
             delete_proxy(proxy)
-            log.info("删除代理池中代理"+e)
+            log.info("删除代理池中代理"+str(e))
 
     return None
 
@@ -106,27 +106,28 @@ for i in range(0, 10000):
             log.error("无效的地址"+url)
             jscontent = getUserInfo(head, payload)
             if jscontent == None:
-                pass
+                return
         time2 = time.time()
         try:
+
             jsDict = json.loads(jscontent)
             statusJson = jsDict['status'] if 'status' in jsDict.keys(
             ) else False
             if statusJson == True:
                 if 'data' in jsDict.keys():
                     jsData = jsDict['data']
-                    mid = jsData['mid']
-                    name = jsData['name']
-                    sex = jsData['sex']
-                    rank = jsData['rank']
-                    face = jsData['face']
-                    regtimestamp = jsData['regtime']
+                    mid = jsData.get('mid')
+                    name = jsData.get('name')
+                    sex = jsData.get('sex')
+                    rank = jsData.get('rank')
+                    face = jsData.get('face')
+                    regtimestamp = jsData.get('regtime')
                     regtime_local = time.localtime(regtimestamp)
                     regtime = time.strftime("%Y-%m-%d %H:%M:%S", regtime_local)
-                    spacesta = jsData['spacesta']
-                    birthday = jsData['birthday'] if 'birthday' in jsData.keys(
+                    spacesta = jsData.get('spacesta')
+                    birthday = jsData.get('birthday') if 'birthday' in jsData.keys(
                     ) else 'nobirthday'
-                    sign = jsData['sign']
+                    sign = jsData.get('sign')
                     level = jsData['level_info']['current_level']
                     OfficialVerifyType = jsData['official_verify']['type']
                     OfficialVerifyDesc = jsData['official_verify']['desc']
