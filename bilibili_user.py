@@ -62,6 +62,11 @@ def delete_proxy(proxy):
 urls = []
 
 
+def initUrls():
+    for i in range(5000100, 10000000):
+        urls.append('https://space.bilibili.com/' + str(i))
+
+
 def initError():
     cur = conn.cursor()
     cur.execute("select mid from bilibili_user_info order by mid ASC")
@@ -135,7 +140,7 @@ def getsource(url):
     ua = random.choice(uas)
     head = {
         'User-Agent': ua,
-        'Referer': 'https://space.bilibili.com/' + str(i) + '?from=search&seid=' + str(random.randint(10000, 50000))
+        'Referer': 'https://space.bilibili.com/' + str(random.randint(0, 50000)) + '?from=search&seid=' + str(random.randint(10000, 50000))
     }
 
     jsDict = getUserInfo(head, payload)
@@ -226,7 +231,7 @@ def getsource(url):
 
 
 if __name__ == "__main__":
-    pool = ThreadPool(40)
+    pool = ThreadPool(1)
     initError()
     try:
         results = pool.map(getsource, urls)
