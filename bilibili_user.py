@@ -62,18 +62,28 @@ def delete_proxy(proxy):
 urls = []
 
 
-def initUrls():
-    for i in range(5000100, 10000000):
+def initUrls(start, step):
+    cur = conn.cursor()
+    cur.execute("select mid from bilibili_error")
+    results = list(cur.fetchall())
+    cur.execute("delete from bilibili_error")
+    conn.commit()
+    for x in results:
+        urls.append('https://space.bilibili.com/' + str(x[0]))
+    for i in range(start, start+step):
         urls.append('https://space.bilibili.com/' + str(i))
 
 
-def initError():
+def initError(limit):
     cur = conn.cursor()
-    cur.execute("select mid from bilibili_user_info order by mid ASC")
+    cur.execute("select mid from bilibili_user_info limit " +
+                limit+" order by mid ASC")
     results = list(cur.fetchall())
     cur.execute("select max(mid) from bilibili_user_info ")
-    max = cur.fetchone()
-    for i in range(max[0]):
+    max = (cur.fetchone())[0]
+    if(max < limit):
+        max = limit
+    for i in range(max):
         if(i == results[0][0]):
             results.pop(0)
             if(len(results) == 0):
@@ -104,15 +114,15 @@ def getUserInfo(head, payload):
                       timeout=2,
                       proxies={"http": "http://{}".format(proxy), "https": "https://{}".format(proxy)}) \
                 .text
+            if(jscontent.__contains__("400")):  # ip被封了
+                retry_count -= 1
+                delete_proxy(proxy)
+                log.debug("ip被封,删除代理池中代理")
+                return getUserInfo(head, payload)
             try:
-                if(jscontent.__contains__("400")):  # ip被封了
-                    retry_count -= 1
-                    delete_proxy(proxy)
-                    log.debug("ip被封,删除代理池中代理")
-                    return getUserInfo(head, payload)
                 return json.loads(jscontent)
             except Exception as e:
-                log.error("其他异常" + str(e))
+                log.error("其他异常" + (jscontent))
                 return None
 
         except Exception as e:
@@ -220,19 +230,22 @@ def getsource(url):
                              toutu, toutuId, coins, following, fans, archiveview, article))
                 conn.commit()
             except Exception as e:
-                log.error(e)
+                log.error("sqlerror"+str(e))
         else:
             saveErrorUrl(url.replace('https://space.bilibili.com/', ''))
             log.error("Error: " + url)
     except Exception as e:
         saveErrorUrl(url.replace('https://space.bilibili.com/', ''))
+        log.error("formaterror"+str(e))
         log.error(e)
         pass
 
 
 if __name__ == "__main__":
-    pool = ThreadPool(1)
-    initError()
+    pool = ThreadPool(40)
+    initError(1000)
+    #initUrls(5000100, 1000000)
+
     try:
         results = pool.map(getsource, urls)
     except Exception as e:
