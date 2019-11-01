@@ -131,9 +131,7 @@ def getUserInfo(head, payload):
                       timeout=2,
                       proxies={"http": "http://{}".format(proxy), "https": "https://{}".format(proxy)}) \
                 .text
-            if(jscontent.__contains__("400")):  # ip被封了
 
-                return None
             try:
                 return json.loads(jscontent)
             except Exception as e:
