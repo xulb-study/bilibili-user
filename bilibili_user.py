@@ -76,8 +76,8 @@ def initUrls(start, step):
 
 def initError(limit):
     cur = conn.cursor()
-    cur.execute("select mid from bilibili_user_info limit " +
-                str(limit)+" order by mid ASC")
+    cur.execute(
+        "select mid from bilibili_user_info  order by mid ASC limit " + str(limit)+"")
     results = list(cur.fetchall())
     cur.execute("select max(mid) from bilibili_user_info ")
     max = (cur.fetchone())[0]
