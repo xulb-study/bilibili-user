@@ -87,13 +87,14 @@ def mysqlconnect():
 def initError(limit):
     conn = mysqlconnect()
     cur = conn.cursor()
+    cur.execute("select max(mid) from bilibili_user_info ")
+    max = (cur.fetchone())[0]
+    if(max > limit):
+        max = limit
     cur.execute(
         "select mid from bilibili_user_info  order by mid ASC limit " + str(limit)+"")
     results = list(cur.fetchall())
-    cur.execute("select max(mid) from bilibili_user_info ")
-    max = (cur.fetchone())[0]
-    if(max < limit):
-        max = limit
+
     for i in range(max):
         if(i == results[0][0]):
             results.pop(0)
