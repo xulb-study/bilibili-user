@@ -4,7 +4,7 @@ import requests
 import json
 import random
 import pymysql
-
+from DBUtils.PooledDB import PooledDB
 import datetime
 import time
 
@@ -30,8 +30,6 @@ def LoadUserAgents(uafile):
     return uas
 
 
-conn = pymysql.connect(
-    host='eam-mysql', user='root', passwd='123456', db='bilibili', charset='utf8')
 log.basicConfig(level=log.INFO,
                 format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                 datefmt='%a, %d %b %Y %H:%M:%S',
@@ -63,6 +61,7 @@ urls = []
 
 
 def initUrls(start, step):
+    conn = mysqlconnect()
     cur = conn.cursor()
     cur.execute("select mid from bilibili_error")
     results = list(cur.fetchall())
@@ -72,9 +71,21 @@ def initUrls(start, step):
         urls.append('https://space.bilibili.com/' + str(x[0]))
     for i in range(start, start+step):
         urls.append('https://space.bilibili.com/' + str(i))
+    cur.close()
+    conn.close()
+
+
+mysqlpool = PooledDB(pymysql, 5, host='eam-mysql', user='root',
+                     passwd='123456', db='bilibili', charset='utf8')  # 5为连接池里的最少连接数
+
+
+def mysqlconnect():
+    conn = mysqlpool.connection()
+    return conn
 
 
 def initError(limit):
+    conn = mysqlconnect()
     cur = conn.cursor()
     cur.execute(
         "select mid from bilibili_user_info  order by mid ASC limit " + str(limit)+"")
@@ -93,12 +104,17 @@ def initError(limit):
             pass
     cur.execute("delete from bilibili_error")
     conn.commit()
+    cur.close()
+    conn.close()
 
 
 def saveErrorUrl(id):
+    conn = mysqlconnect()
     cur = conn.cursor()
     cur.execute("INSERT INTO bilibili_error (mid)VALUE("+id+")")
     conn.commit()
+    cur.close()
+    conn.close()
 
 
 def getUserInfo(head, payload):
@@ -218,6 +234,7 @@ def getsource(url):
                 return
             try:
                 # Please write your MySQL's information.
+                conn = mysqlconnect()
                 cur = conn.cursor()
                 cur.execute('INSERT INTO bilibili_user_info(mid, name, sex, rank, face, regtime, spacesta, \
                                 birthday, sign, level, OfficialVerifyType, OfficialVerifyDesc, vipType, vipStatus, \
@@ -229,6 +246,8 @@ def getsource(url):
                              birthday, sign, level, OfficialVerifyType, OfficialVerifyDesc, vipType, vipStatus,
                              toutu, toutuId, coins, following, fans, archiveview, article))
                 conn.commit()
+                cur.close()
+                conn.close()
             except Exception as e:
                 log.error("sqlerror"+str(e))
         else:
@@ -244,7 +263,7 @@ def getsource(url):
 if __name__ == "__main__":
     pool = ThreadPool(40)
     initError(1000)
-    #initUrls(5000100, 1000000)
+    # initUrls(5000100, 1000000)
 
     try:
         results = pool.map(getsource, urls)
