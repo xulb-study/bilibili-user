@@ -119,7 +119,7 @@ def saveErrorUrl(id):
 
 
 def getUserInfo(head, payload):
-    retry_count = 2
+    retry_count = 3
     proxy = get_proxy().get("proxy")
     while retry_count > 0:
         try:
@@ -132,10 +132,8 @@ def getUserInfo(head, payload):
                       proxies={"http": "http://{}".format(proxy), "https": "https://{}".format(proxy)}) \
                 .text
             if(jscontent.__contains__("400")):  # ip被封了
-                retry_count -= 1
-                delete_proxy(proxy)
-                log.debug("ip被封,删除代理池中代理")
-                return getUserInfo(head, payload)
+
+                return None
             try:
                 return json.loads(jscontent)
             except Exception as e:
@@ -158,20 +156,30 @@ urls = []
 # Please change the range data by yourself.
 
 
-def getsource(url):
-    log.info("执行开始")
-    payload = {
+def getPayload(url):
+    return {
         '_': datetime_to_timestamp_in_milliseconds(datetime.datetime.now()),
         'mid': url.replace('https://space.bilibili.com/', '')
     }
+
+
+def getHeader():
     ua = random.choice(uas)
     head = {
         'User-Agent': ua,
         'Referer': 'https://space.bilibili.com/' + str(random.randint(0, 50000)) + '?from=search&seid=' + str(random.randint(10000, 50000))
     }
+    return head
 
+
+def getsource(url):
+    log.info("执行开始")
+    payload = getPayload(url)
+    head = getHeader()
     jsDict = getUserInfo(head, payload)
     if jsDict == None:
+        payload = getPayload(url)
+        head = getHeader()
         jsDict = getUserInfo(head, payload)
         if jsDict == None:
             saveErrorUrl(url.replace('https://space.bilibili.com/', ''))
