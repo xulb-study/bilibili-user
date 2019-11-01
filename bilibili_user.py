@@ -30,6 +30,8 @@ def LoadUserAgents(uafile):
     return uas
 
 
+conn = pymysql.connect(
+    host='eam-mysql', user='root', passwd='123456', db='bilibili', charset='utf8')
 log.basicConfig(level=log.INFO,
                 format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                 datefmt='%a, %d %b %Y %H:%M:%S',
@@ -57,6 +59,33 @@ def delete_proxy(proxy):
         "http://my_propxy:5010/delete/?proxy={}".format(proxy), timeout=2)
 
 
+urls = []
+
+
+def initError():
+    cur = conn.cursor()
+    cur.execute("select mid from bilibili_user_info order by mid ASC")
+    results = list(cur.fetchall())
+    cur.execute("select max(mid) from bilibili_user_info ")
+    max = cur.fetchone()
+    for i in range(max[0]):
+        if(i == results[0][0]):
+            results.pop(0)
+            if(len(results) == 0):
+                break
+        else:
+            urls.append('https://space.bilibili.com/' + str(i))
+            pass
+    cur.execute("delete from bilibili_error")
+    conn.commit()
+
+
+def saveErrorUrl(id):
+    cur = conn.cursor()
+    cur.execute("INSERT INTO bilibili_error (mid)VALUE("+id+")")
+    conn.commit()
+
+
 def getUserInfo(head, payload):
     retry_count = 2
     proxy = get_proxy().get("proxy")
@@ -71,12 +100,15 @@ def getUserInfo(head, payload):
                       proxies={"http": "http://{}".format(proxy), "https": "https://{}".format(proxy)}) \
                 .text
             try:
+                if(jscontent.__contains__("400")):  # ip被封了
+                    retry_count -= 1
+                    delete_proxy(proxy)
+                    log.debug("ip被封,删除代理池中代理")
+                    return getUserInfo(head, payload)
                 return json.loads(jscontent)
-            except:
-                retry_count -= 1
-                delete_proxy(proxy)
-                log.debug("删除代理池中代理")
-                return getUserInfo(head, payload)
+            except Exception as e:
+                log.error("其他异常" + str(e))
+                return None
 
         except Exception as e:
             retry_count -= 1
@@ -93,110 +125,112 @@ urls = []
 
 # Please change the range data by yourself.
 
-for i in range(100001, 5000000):
-    url = 'https://space.bilibili.com/' + str(i)
-    urls.append(url)
 
-    def getsource(url):
-        log.info("执行开始")
-        payload = {
-            '_': datetime_to_timestamp_in_milliseconds(datetime.datetime.now()),
-            'mid': url.replace('https://space.bilibili.com/', '')
-        }
-        ua = random.choice(uas)
-        head = {
-            'User-Agent': ua,
-            'Referer': 'https://space.bilibili.com/' + str(i) + '?from=search&seid=' + str(random.randint(10000, 50000))
-        }
+def getsource(url):
+    log.info("执行开始")
+    payload = {
+        '_': datetime_to_timestamp_in_milliseconds(datetime.datetime.now()),
+        'mid': url.replace('https://space.bilibili.com/', '')
+    }
+    ua = random.choice(uas)
+    head = {
+        'User-Agent': ua,
+        'Referer': 'https://space.bilibili.com/' + str(i) + '?from=search&seid=' + str(random.randint(10000, 50000))
+    }
 
+    jsDict = getUserInfo(head, payload)
+    if jsDict == None:
         jsDict = getUserInfo(head, payload)
         if jsDict == None:
-            jsDict = getUserInfo(head, payload)
-            if jsDict == None:
-                return
-        time2 = time.time()
-        try:
-            statusJson = jsDict['status'] if 'status' in jsDict.keys(
-            ) else False
-            if statusJson == True:
-                if 'data' in jsDict.keys():
-                    jsData = jsDict['data']
-                    mid = jsData.get('mid')
-                    name = jsData.get('name')
-                    sex = jsData.get('sex')
-                    rank = jsData.get('rank')
-                    face = jsData.get('face')
-                    regtimestamp = jsData.get('regtime')
-                    regtime_local = time.localtime(regtimestamp)
-                    regtime = time.strftime("%Y-%m-%d %H:%M:%S", regtime_local)
-                    spacesta = jsData.get('spacesta')
-                    birthday = jsData.get('birthday') if 'birthday' in jsData.keys(
-                    ) else 'nobirthday'
-                    sign = jsData.get('sign')
-                    level = jsData['level_info']['current_level']
-                    OfficialVerifyType = jsData['official_verify']['type']
-                    OfficialVerifyDesc = jsData['official_verify']['desc']
-                    vipType = jsData['vip']['vipType']
-                    vipStatus = jsData['vip']['vipStatus']
-                    toutu = jsData['toutu']
-                    toutuId = jsData['toutuId']
-                    coins = jsData['coins']
-                    log.info("Succeed get user info: " +
-                             str(mid) + "\t" + str(time2 - time1))
-                    try:
-                        proxy = get_proxy().get("proxy")
-                        res = requests.get(
-                            'https://api.bilibili.com/x/relation/stat?vmid=' +
-                            str(mid) + '&jsonp=jsonp',
-                            timeout=2,
-                            proxies={"http": "http://{}".format(proxy), "https": "https://{}".format(proxy)}).text
-                        viewinfo = requests.get(
-                            'https://api.bilibili.com/x/space/upstat?mid=' +
-                            str(mid) + '&jsonp=jsonp',
-                            timeout=2,
-                            proxies={"http": "http://{}".format(proxy), "https": "https://{}".format(proxy)}).text
-                        js_fans_data = json.loads(res)
-                        js_viewdata = json.loads(viewinfo)
-                        following = js_fans_data['data']['following']
-                        fans = js_fans_data['data']['follower']
-                        archiveview = js_viewdata['data']['archive']['view']
-                        article = js_viewdata['data']['article']['view']
-                    except:
-                        following = 0
-                        fans = 0
-                        archiveview = 0
-                        article = 0
-                else:
-                    log.info('no data now')
+            saveErrorUrl(url.replace('https://space.bilibili.com/', ''))
+            return
+    time2 = time.time()
+    try:
+        statusJson = jsDict['status'] if 'status' in jsDict.keys(
+        ) else False
+        if statusJson == True:
+            if 'data' in jsDict.keys():
+                jsData = jsDict['data']
+                mid = jsData.get('mid')
+                name = jsData.get('name')
+                sex = jsData.get('sex')
+                rank = jsData.get('rank')
+                face = jsData.get('face')
+                regtimestamp = jsData.get('regtime')
+                regtime_local = time.localtime(regtimestamp)
+                regtime = time.strftime("%Y-%m-%d %H:%M:%S", regtime_local)
+                spacesta = jsData.get('spacesta')
+                birthday = jsData.get('birthday') if 'birthday' in jsData.keys(
+                ) else 'nobirthday'
+                sign = jsData.get('sign')
+                level = jsData['level_info']['current_level']
+                OfficialVerifyType = jsData['official_verify']['type']
+                OfficialVerifyDesc = jsData['official_verify']['desc']
+                vipType = jsData['vip']['vipType']
+                vipStatus = jsData['vip']['vipStatus']
+                toutu = jsData['toutu']
+                toutuId = jsData['toutuId']
+                coins = jsData['coins']
+                log.info("Succeed get user info: " +
+                         str(mid) + "\t" + str(time2 - time1))
                 try:
-                    # Please write your MySQL's information.
-                    conn = pymysql.connect(
-                        host='eam-mysql', user='root', passwd='123456', db='bilibili', charset='utf8')
-                    cur = conn.cursor()
-                    cur.execute('INSERT INTO bilibili_user_info(mid, name, sex, rank, face, regtime, spacesta, \
+                    proxy = get_proxy().get("proxy")
+                    res = requests.get(
+                        'https://api.bilibili.com/x/relation/stat?vmid=' +
+                        str(mid) + '&jsonp=jsonp',
+                        timeout=2,
+                        proxies={"http": "http://{}".format(proxy), "https": "https://{}".format(proxy)}).text
+                    viewinfo = requests.get(
+                        'https://api.bilibili.com/x/space/upstat?mid=' +
+                        str(mid) + '&jsonp=jsonp',
+                        timeout=2,
+                        proxies={"http": "http://{}".format(proxy), "https": "https://{}".format(proxy)}).text
+                    js_fans_data = json.loads(res)
+                    js_viewdata = json.loads(viewinfo)
+                    following = js_fans_data['data']['following']
+                    fans = js_fans_data['data']['follower']
+                    archiveview = js_viewdata['data']['archive']['view']
+                    article = js_viewdata['data']['article']['view']
+                except:
+                    following = 0
+                    fans = 0
+                    archiveview = 0
+                    article = 0
+            else:
+                saveErrorUrl(url.replace(
+                    'https://space.bilibili.com/', ''))
+                log.info('no data now')
+                return
+            try:
+                # Please write your MySQL's information.
+                cur = conn.cursor()
+                cur.execute('INSERT INTO bilibili_user_info(mid, name, sex, rank, face, regtime, spacesta, \
                                 birthday, sign, level, OfficialVerifyType, OfficialVerifyDesc, vipType, vipStatus, \
                                 toutu, toutuId, coins, following, fans ,archiveview, article) \
                     VALUES ("%s","%s","%s","%s","%s","%s","%s","%s","%s","%s",\
                             "%s","%s","%s","%s","%s", "%s","%s","%s","%s","%s","%s")'
-                                %
-                                (mid, name, sex, rank, face, regtime, spacesta,
-                                 birthday, sign, level, OfficialVerifyType, OfficialVerifyDesc, vipType, vipStatus,
-                                 toutu, toutuId, coins, following, fans, archiveview, article))
-                    conn.commit()
-                except Exception as e:
-                    log.error(e)
-            else:
-                log.error("Error: " + url)
-        except Exception as e:
-            log.error(e)
-            pass
+                            %
+                            (mid, name, sex, rank, face, regtime, spacesta,
+                             birthday, sign, level, OfficialVerifyType, OfficialVerifyDesc, vipType, vipStatus,
+                             toutu, toutuId, coins, following, fans, archiveview, article))
+                conn.commit()
+            except Exception as e:
+                log.error(e)
+        else:
+            saveErrorUrl(url.replace('https://space.bilibili.com/', ''))
+            log.error("Error: " + url)
+    except Exception as e:
+        saveErrorUrl(url.replace('https://space.bilibili.com/', ''))
+        log.error(e)
+        pass
+
 
 if __name__ == "__main__":
     pool = ThreadPool(40)
+    initError()
     try:
         results = pool.map(getsource, urls)
     except Exception as e:
         log.error(e)
-
     pool.close()
     pool.join()
