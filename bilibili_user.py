@@ -61,21 +61,21 @@ urls = []
 
 
 def initUrls(start, step):
-    conn = mysqlconnect()
-    cur = conn.cursor()
-    cur.execute("select mid from bilibili_error")
-    results = list(cur.fetchall())
-    cur.execute("delete from bilibili_error")
-    conn.commit()
-    for x in results:
-        urls.append('https://space.bilibili.com/' + str(x[0]))
+    # conn = mysqlconnect()
+    # cur = conn.cursor()
+    # cur.execute("select mid from bilibili_error")
+    # results = list(cur.fetchall())
+    # cur.execute("delete from bilibili_error")
+    # conn.commit()
+    # for x in results:
+    #     urls.append('https://space.bilibili.com/' + str(x[0]))
     for i in range(start, start+step):
         urls.append('https://space.bilibili.com/' + str(i))
-    cur.close()
-    conn.close()
+    # cur.close()
+    # conn.close()
 
 
-mysqlpool = PooledDB(pymysql, 5, host='eam-mysql', user='root',
+mysqlpool = PooledDB(pymysql, 5, host='eam-mysql', user='bilibili',
                      passwd='123456', db='bilibili', charset='utf8')  # 5为连接池里的最少连接数
 
 
@@ -171,6 +171,7 @@ def getHeader():
 
 
 def getsource(url):
+    url=https://space.bilibili.com/+str(url)
     log.info("执行开始")
     payload = getPayload(url)
     head = getHeader()
@@ -269,11 +270,11 @@ def getsource(url):
 
 if __name__ == "__main__":
     pool = ThreadPool(40)
-    initError(1000)
+   # initError(1000)
     # initUrls(5000100, 1000000)
 
     try:
-        results = pool.map(getsource, urls)
+        results = pool.map(getsource, [i for i in range(10)])
     except Exception as e:
         log.error(e)
     pool.close()
