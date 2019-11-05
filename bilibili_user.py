@@ -171,7 +171,7 @@ def getHeader():
 
 
 def getsource(url):
-    url=https://space.bilibili.com/+str(url)
+    url = "https://space.bilibili.com/"+str(url)
     log.info("执行开始")
     payload = getPayload(url)
     head = getHeader()
