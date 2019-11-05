@@ -30,10 +30,7 @@ def LoadUserAgents(uafile):
     return uas
 
 
-log.basicConfig(level=log.INFO,
-                format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                datefmt='%a, %d %b %Y %H:%M:%S',
-                handlers={log.FileHandler(filename='test.log', mode='a', encoding='utf-8')})
+logger = logging.getLogger("logger")
 
 uas = LoadUserAgents("user_agents.txt")
 head = {
@@ -55,9 +52,6 @@ def get_proxy():
 def delete_proxy(proxy):
     requests.get(
         "http://my_propxy:5010/delete/?proxy={}".format(proxy), timeout=2)
-
-
-urls = []
 
 
 def initUrls(start, step):
@@ -135,21 +129,22 @@ def getUserInfo(head, payload):
             try:
                 return json.loads(jscontent)
             except Exception as e:
-                log.error("其他异常" + (jscontent))
+                logger.error("其他异常" + (jscontent))
                 return None
 
         except Exception as e:
             retry_count -= 1
             # 出错2次, 删除代理池中代理
             delete_proxy(proxy)
-            log.debug("删除代理池中代理"+str(e))
+            logger.debug("删除代理池中代理"+str(e))
 
     return None
 
 
 time1 = time.time()
-
+sumCount = 0
 urls = []
+
 
 # Please change the range data by yourself.
 
@@ -172,7 +167,9 @@ def getHeader():
 
 def getsource(url):
     url = "https://space.bilibili.com/"+str(url)
-    log.info("执行开始")
+    global sumCount
+    sumCount += 1
+    logger.info("执行开始"+str(sumCount))
     payload = getPayload(url)
     head = getHeader()
     jsDict = getUserInfo(head, payload)
@@ -210,8 +207,8 @@ def getsource(url):
                 toutu = jsData['toutu']
                 toutuId = jsData['toutuId']
                 coins = jsData['coins']
-                log.info("Succeed get user info: " +
-                         str(mid) + "\t" + str(time2 - time1))
+                logger.info("Succeed get user info: " +
+                            str(mid) + "\t" + str(time2 - time1))
                 try:
                     proxy = get_proxy().get("proxy")
                     res = requests.get(
@@ -238,7 +235,7 @@ def getsource(url):
             else:
                 saveErrorUrl(url.replace(
                     'https://space.bilibili.com/', ''))
-                log.info('no data now')
+                logger.info('no data now')
                 return
             try:
                 # Please write your MySQL's information.
@@ -257,14 +254,14 @@ def getsource(url):
                 cur.close()
                 conn.close()
             except Exception as e:
-                log.error("sqlerror"+str(e))
+                logger.error("sqlerror"+str(e))
         else:
             saveErrorUrl(url.replace('https://space.bilibili.com/', ''))
-            log.error("Error: " + url)
+            logger.error("Error: " + url)
     except Exception as e:
         saveErrorUrl(url.replace('https://space.bilibili.com/', ''))
-        log.error("formaterror"+str(e))
-        log.error(e)
+        logger.error("formaterror"+str(e))
+        logger.error(e)
         pass
 
 
@@ -274,8 +271,8 @@ if __name__ == "__main__":
     # initUrls(5000100, 1000000)
 
     try:
-        results = pool.map(getsource, [i for i in range(10)])
+        results = pool.map(getsource, [i for i in range(1000000, 5000000)])
     except Exception as e:
-        log.error(e)
+        logger.error(e)
     pool.close()
     pool.join()

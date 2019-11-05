@@ -1,11 +1,17 @@
-import logging as log
 from multiprocessing.dummy import Pool as ThreadPool
+import logging
+logger = logging.getLogger("logger")
+
+
 urls = []
+acount = 0
 for i in range(5000001, 5000100):
     urls.append(i)
 
     def getsource(url):
-        log.error("执行开始"+str(url))
+        global acount
+        acount += 1
+        logger.error("执行开始"+str(acount))
 if __name__ == "__main__":
     pool = ThreadPool(40)
     try:
@@ -13,6 +19,6 @@ if __name__ == "__main__":
             print("111")
         results = pool.map(getsource, urls)
     except Exception as e:
-        log.error(e)
+        logger.error(e)
     pool.close()
     pool.join()
