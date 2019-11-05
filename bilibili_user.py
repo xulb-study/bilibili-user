@@ -9,7 +9,7 @@ import datetime
 import time
 import logger
 import logging
-import asyncio
+
 
 from multiprocessing.dummy import Pool as ThreadPool
 
@@ -130,6 +130,9 @@ def getUserInfo(head, payload):
                 return json.loads(jscontent)
             except Exception as e:
                 logger.error("其他异常" + (jscontent))
+                if(jscontent.__contains__("Please wait a moment while we launch our security service")):
+                    delete_proxy(proxy)
+                    logger.debug("删除代理池中代理"+str(e))
                 return None
 
         except Exception as e:
@@ -265,21 +268,15 @@ def getsource(url):
         pass
 
 
-def run():
-    for i in range(1000000, 1001000):
-        loop.run_until_complete(getsource(i))
-
-
-loop = asyncio.get_event_loop()
 if __name__ == "__main__":
-    run()
-    # pool = ThreadPool(40)
+
+    pool = ThreadPool(40)
     # initError(1000)
     # initUrls(5000100, 1000000)
 
-    # try:
-    #     results = pool.map(getsource, [i for i in range(1000000, 5000000)])
-    # except Exception as e:
-    #     logger.error(e)
-    # pool.close()
-    # pool.join()
+    try:
+        results = pool.map(getsource, [i for i in range(1000000, 1001000)])
+    except Exception as e:
+        logger.error(e)
+    pool.close()
+    pool.join()
